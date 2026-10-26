@@ -1,0 +1,16 @@
+# 核心依赖（本地 xlsx + SQLite + GUI 全链路必需）
+pandas>=2.0
+openpyxl>=3.1
+PyYAML>=6.0
+Jinja2>=3.1
+requests>=2.31
+PySide6>=6.5
+
+# 生产可选依赖（type=database / mail.mode=smtp 时需要）
+# SQLAlchemy>=2.0        # 数据库数据源与日志仓库
+# pymysql>=1.1           # MySQL 驱动
+# psycopg2-binary>=2.9   # PostgreSQL 驱动
+# keyring>=24.0          # SMTP 密码存入系统钥匙串
+
+# 打包（可选）
+# pyinstaller>=6.0

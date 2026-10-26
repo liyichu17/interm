@@ -1,0 +1,39 @@
+# 本地演示配置（脱敏样例 data/bills.xlsx 中出现的 BU）
+# 用法：python -m spv_reminder.cli scan --config config.local.yaml
+# 目的：样例数据不含 STA DS / STA DP，用本配置可看到多条命中效果
+
+scan:
+  first_overdue_days: 10
+  re_remind_interval_days: 20
+  max_remind_rounds: 3
+  daily_scan_time: "09:00"
+  target_bu_list: ["TIDES", "RCS", "IVBU", "BAS", "MD", "DMPK"]
+  timezone_offset_hours: 8
+
+datasource:
+  type: xlsx
+  xlsx_path: "./data/bills.xlsx"
+  xlsx_sheet: "Sheet1"
+
+log_repo:
+  type: sqlite
+  sqlite_path: "./logs/demo_reminder.db"
+
+mail:
+  mode: file
+  smtp_template: "default_dunning"
+  sender_name: "WuXi AppTec AR Team"
+  outbox_dir: "./outbox"
+
+auth:
+  sso_enabled: false
+  mock_user_id: "demo_user"
+  mock_user_name: "演示用户"
+  mock_is_admin: true
+
+app:
+  autostart: false
+  daily_scan_enabled: false
+  log_dir: "./logs"
+  log_level: "INFO"
+  language: "zh"

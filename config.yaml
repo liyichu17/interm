@@ -1,0 +1,53 @@
+# SPV 客户逾期账单提醒工具 —— 主配置文件
+# 所有业务阈值均为配置项，扩展 BU / 调整轮次无需改代码（设计文档 §4.3）
+
+scan:
+  first_overdue_days: 10          # 首次提醒逾期阈值（天）
+  re_remind_interval_days: 20     # 再次提醒间隔（天）
+  max_remind_rounds: 3            # 最大提醒轮次，超过则 ESCALATE 转主管
+  daily_scan_time: "09:00"        # 每日定时扫描时间
+  target_bu_list: ["STA DS", "STA DP", "TIDES"]
+  timezone_offset_hours: 8        # 业务日期时区（UTC+8）
+
+datasource:
+  type: xlsx                      # xlsx | database
+  xlsx_path: "./data/bills.xlsx"
+  xlsx_sheet: "Sheet1"
+  db_url: ""                      # type=database 时生效，例：mysql+pymysql://user:pwd@host:3306/ar
+  db_view: "v_overdue_bills"
+  db_timeout_seconds: 15
+
+log_repo:
+  type: sqlite                    # sqlite | database
+  sqlite_path: "{appdata}/reminder.db"
+  db_url: ""
+
+mail:
+  smtp_template: "default_dunning"
+  sender_name: "WuXi AppTec AR Team"
+  smtp_host: ""
+  smtp_port: 587
+  smtp_use_tls: true
+  smtp_username: ""
+  smtp_password_env: "SPV_SMTP_PASSWORD"   # 密码从环境变量/钥匙串读取，不落盘
+  outbox_dir: "./outbox"
+  mode: file                      # file（生成 .eml）| smtp（真实发送）
+
+auth:
+  sso_enabled: false              # 生产置 true
+  mock_user_id: "local_user"
+  mock_user_name: "本地测试用户"
+  mock_user_mail: "local_user@example.com"
+  mock_is_admin: true
+  sso_authorize_url: ""
+  sso_token_url: ""
+  sso_client_id: ""
+  sso_redirect_port: 8765
+
+app:
+  autostart: true
+  daily_scan_enabled: true
+  log_dir: "./logs"
+  log_level: "INFO"
+  language: "zh"
+  version: "1.0.0"
