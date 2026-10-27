@@ -97,3 +97,12 @@ def test_export_filters(repo):
     df = repo.export({"status": RemindStatus.FAILED})
     assert len(df) == 1
     assert len(repo.export({"invoice_no": "INV-00"})) == 2
+
+
+def test_export_contains_popup_fields(repo):
+    log = _log("INV-003", status=RemindStatus.PENDING)
+    log.popup_shown = True
+    repo.save(log)
+    df = repo.export({"invoice_no": "INV-003"})
+    assert "popup_shown" in df.columns
+    assert bool(df.iloc[0]["popup_shown"]) is True

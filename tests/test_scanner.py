@@ -43,8 +43,21 @@ def test_repeated_scan_same_day_is_idempotent(scanner):
     first = scanner.scan(business_date=dt.date(2026, 10, 26))
     second = scanner.scan(business_date=dt.date(2026, 10, 26))
     assert first.hit_count == 7
-    assert second.hit_count == 0          # 同日不重复提醒
+    assert second.hit_count == 7          # 未处理 pending 条目应可继续被立即扫描命中
     assert second.closed_count == 0       # 仍在逾期清单，不得被关闭
+
+
+def test_pending_can_be_rescanned_after_first_remind(scanner):
+    report = scanner.scan(business_date=dt.date(2026, 10, 26))
+    key = report.hits.iloc[0]["_row_key"]
+    latest = scanner.log_repo.latest(key)
+    assert latest.status == "PENDING"
+
+    # 同日再次扫描：该 pending 账单仍应被命中（同轮次继续跟进）
+    second = scanner.scan(business_date=dt.date(2026, 10, 26))
+    rows = second.hits[second.hits["_row_key"].astype(str) == str(key)]
+    assert len(rows) == 1
+    assert int(rows.iloc[0]["remind_round"]) == latest.remind_round
 
 
 def test_pending_queue_and_mark_processed(scanner):

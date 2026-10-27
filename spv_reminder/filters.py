@@ -143,6 +143,14 @@ def decide_remind_round(bill: Bill, cfg, business_date: dt.date,
         return True, latest.remind_round + 1, "", False
 
     elapsed = (business_date - latest.remind_date).days
+    # 首次提醒后若员工尚未处理（PENDING/FAILED 且未发送成功），
+    # 在再提醒间隔内，立即扫描仍应继续出现在待跟进清单；
+    # 超过间隔后按原有轮次规则推进。
+    if latest.status in (RemindStatus.PENDING, RemindStatus.FAILED) and not latest.mail_sent:
+        if elapsed < cfg.scan.re_remind_interval_days:
+            round_no = latest.remind_round if latest.remind_round > 0 else 1
+            return True, round_no, "", False
+
     if elapsed < cfg.scan.re_remind_interval_days:
         reason = SKIP_TOO_SOON.format(days=cfg.scan.re_remind_interval_days)
         return False, latest.remind_round, reason, False
