@@ -171,6 +171,7 @@ class OverdueScanner:
                 status=status,
                 amount_cny=to_float(row.get(C_AMOUNT_CNY)),
                 operator=operator,
+                popup_shown=True,
                 popup_shown_at=now,
             )
             existing = self.log_repo.latest(key)

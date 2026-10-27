@@ -126,13 +126,13 @@ def test_closed_is_terminal(cfg, business_date):
     assert included is False and reason
 
 
-def test_failed_mail_still_counts_as_reminded(cfg, business_date):
-    """发送失败的账单仍占用一轮，避免当日重复轰炸客户。"""
+def test_failed_mail_can_retry_within_interval(cfg, business_date):
+    """发送失败且未发信成功时，应允许在间隔内继续进入待跟进队列。"""
     latest = ReminderLog(invoice_no="INV-001", remind_round=1,
                          remind_date=dt.date(2026, 10, 25), status=RemindStatus.FAILED)
     bill = Bill.from_row(make_row())
-    included, *_ = decide_remind_round(bill, cfg, business_date, latest)
-    assert included is False
+    included, rnd, reason, escalated = decide_remind_round(bill, cfg, business_date, latest)
+    assert (included, rnd, reason, escalated) == (True, 1, "", False)
 
 
 # ----------------------------------------------------------------- 排序/输出

@@ -11,8 +11,28 @@ from ..constants import RemindStatus
 from ..service.exporter import export_logs
 from .widgets import fill_table
 
-LOG_COLUMNS = ["remind_date", "invoice_no", "customer_name", "bu", "remind_round",
-               "status", "mail_sent", "amount_cny", "mail_to", "operator", "fail_reason"]
+LOG_COLUMNS = [
+    "id",
+    "remind_date",
+    "invoice_no",
+    "customer_code",
+    "customer_name",
+    "bu",
+    "remind_round",
+    "status",
+    "popup_shown",
+    "popup_shown_at",
+    "mail_generated",
+    "mail_sent",
+    "mail_to",
+    "mail_cc",
+    "sent_at",
+    "amount_cny",
+    "operator",
+    "fail_reason",
+    "created_at",
+    "updated_at",
+]
 
 
 class LogViewerDialog(QDialog):
@@ -76,7 +96,8 @@ class LogViewerDialog(QDialog):
 
     def reload(self) -> None:
         df = self.log_repo.export(self._filters())
-        columns = [c for c in LOG_COLUMNS if c in df.columns] or list(df.columns)
+        columns = [c for c in LOG_COLUMNS if c in df.columns]
+        columns += [c for c in df.columns if c not in columns]
         fill_table(self.table, df, columns, row_marks=False)
         self.summary_label.setText(f"共 {len(df)} 条记录　（选中行可查看 tooltip 中的完整信息）")
 
