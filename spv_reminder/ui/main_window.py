@@ -7,16 +7,17 @@ import logging
 from typing import Optional
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QIcon, QPixmap, QTextCursor
+from PySide6.QtGui import QAction, QColor, QGuiApplication, QIcon, QPixmap, QTextCursor
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QMainWindow,
-    QMenu, QMessageBox, QPushButton, QStatusBar, QSystemTrayIcon, QTextEdit,
-    QTimeEdit, QVBoxLayout, QWidget,
+    QMenu, QMessageBox, QPushButton, QScrollArea, QStatusBar, QSystemTrayIcon,
+    QTextEdit, QTimeEdit, QVBoxLayout, QWidget,
 )
 
 from .. import __version__
 from ..auth.base import UserInfo
 from ..config import Config, project_root
+from ..layout import compute_main_window_geometry
 from ..mail import build_mail_composer, build_mail_sender
 from ..service import (
     export_overdue_list, is_autostart_enabled, set_autostart,
@@ -68,8 +69,8 @@ class MainWindow(QMainWindow):
         self.last_report: Optional[ScanReport] = None
 
         self.setWindowTitle(f"SPV 客户逾期账单提醒工具 v{__version__}")
-        self.resize(1180, 760)
         self._build_ui()
+        self._apply_initial_geometry()
         self._build_tray()
         self._start_timers()
 
@@ -83,11 +84,25 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_controls())
         layout.addLayout(self._build_stats())
         layout.addWidget(self._build_log_area(), 1)
-        self.setCentralWidget(central)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(central)
+        self.setCentralWidget(scroll)
 
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.refresh_status()
+
+    def _apply_initial_geometry(self) -> None:
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            self.resize(1180, 760)
+            return
+        available = screen.availableGeometry()
+        x, y, width, height = compute_main_window_geometry(
+            available.x(), available.y(), available.width(), available.height())
+        self.resize(width, height)
+        self.move(x, y)
 
     def _build_header(self) -> QHBoxLayout:
         row = QHBoxLayout()
