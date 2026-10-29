@@ -7,17 +7,16 @@ import logging
 from typing import Optional
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QGuiApplication, QIcon, QPixmap, QTextCursor
+from PySide6.QtGui import QAction, QColor, QIcon, QPixmap, QTextCursor
 from PySide6.QtWidgets import (
-    QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QMainWindow,
-    QMenu, QMessageBox, QPushButton, QScrollArea, QStatusBar, QSystemTrayIcon,
-    QTextEdit, QTimeEdit, QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel,
+    QMainWindow, QMenu, QMessageBox, QPushButton, QStatusBar,
+    QSystemTrayIcon, QTextEdit, QTimeEdit, QVBoxLayout, QWidget,
 )
 
 from .. import __version__
 from ..auth.base import UserInfo
 from ..config import Config, project_root
-from ..layout import compute_main_window_geometry
 from ..mail import build_mail_composer, build_mail_sender
 from ..service import (
     export_overdue_list, is_autostart_enabled, set_autostart,
@@ -29,6 +28,7 @@ from ..utils import business_date_now, fmt_money
 from .log_dialog import LogViewerDialog
 from .mail_dialog import MailPreviewDialog
 from .popup_dialog import ReminderPopupDialog
+from .popup_history_dialog import PopupHistoryDialog
 from .widgets import StatCard
 from .workers import ScanWorker
 
@@ -61,7 +61,8 @@ class MainWindow(QMainWindow):
         self.log_repo = log_repo
         self.user = auth_user
         self.auth_provider = auth_provider
-        self.composer = build_mail_composer(cfg, cfg.resolve_template_dir(project_root()))
+        self.composer = build_mail_composer(cfg, cfg.resolve_template_dir(project_root()),
+                                            log_repo=log_repo)
         self.sender = build_mail_sender(cfg)
         self.scheduler = ReminderScheduler(
             cfg.scan.daily_scan_time, cfg.app.daily_scan_enabled,
@@ -69,8 +70,21 @@ class MainWindow(QMainWindow):
         self.last_report: Optional[ScanReport] = None
 
         self.setWindowTitle(f"SPV 客户逾期账单提醒工具 v{__version__}")
+        # 窗口大小：屏幕可用区域的 85%，宽度上限 1400px，高度上限 900px
+        # 确保在超宽屏 / 高 DPI 下不会过宽导致内容显示不全
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            geo = screen.availableGeometry()
+            w = min(int(geo.width() * 0.85), 1400)
+            h = min(int(geo.height() * 0.85), 900)
+            x = geo.x() + (geo.width() - w) // 2
+            y = geo.y() + (geo.height() - h) // 2
+        else:
+            w, h = 1180, 760
+            x, y = 100, 100
+        self.resize(w, h)
+        self.move(x, y)
         self._build_ui()
-        self._apply_initial_geometry()
         self._build_tray()
         self._start_timers()
 
@@ -84,25 +98,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._build_controls())
         layout.addLayout(self._build_stats())
         layout.addWidget(self._build_log_area(), 1)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(central)
-        self.setCentralWidget(scroll)
+        self.setCentralWidget(central)
 
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.refresh_status()
-
-    def _apply_initial_geometry(self) -> None:
-        screen = QGuiApplication.primaryScreen()
-        if screen is None:
-            self.resize(1180, 760)
-            return
-        available = screen.availableGeometry()
-        x, y, width, height = compute_main_window_geometry(
-            available.x(), available.y(), available.width(), available.height())
-        self.resize(width, height)
-        self.move(x, y)
 
     def _build_header(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -163,6 +163,10 @@ class MainWindow(QMainWindow):
         self.btn_logs = QPushButton("提醒日志")
         self.btn_logs.clicked.connect(self.open_logs)
         row.addWidget(self.btn_logs)
+
+        self.btn_popup_history = QPushButton("历史弹窗")
+        self.btn_popup_history.clicked.connect(self.open_popup_history)
+        row.addWidget(self.btn_popup_history)
 
         self.btn_about = QPushButton("关于")
         self.btn_about.clicked.connect(self.show_about)
@@ -343,6 +347,9 @@ class MainWindow(QMainWindow):
 
     def open_logs(self) -> None:
         LogViewerDialog(self.log_repo, self).exec()
+
+    def open_popup_history(self) -> None:
+        PopupHistoryDialog(self.log_repo, self).exec()
 
     def show_about(self) -> None:
         QMessageBox.about(
